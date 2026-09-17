@@ -1,0 +1,1 @@
+# Compiladores_2026.2_MiniC
