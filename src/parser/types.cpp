@@ -41,7 +41,7 @@ TypeRef Parser::parse_type() {
         case TokenKind::KwVoid:   type.base = BaseType::Void; break;
         case TokenKind::KwAuto:   type.base = BaseType::Auto; break;
         default:
-            throw CompileError("tipo esperado mas encontrado " + describe(t), t.pos);
+            throw CompileError("tipo esperado mas encontrado '" + t.lexeme + "'", t.pos);
     }
     advance();
 
