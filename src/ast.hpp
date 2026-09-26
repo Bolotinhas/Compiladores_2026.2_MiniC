@@ -53,6 +53,7 @@ ExprPtr make_expr(Pos pos, T node) {
 // ------------------------------------------------------------------- Comandos
 // TODO(grupo): o parser ainda nao produz estes nos. Ajustem o formato antes de
 // comecar a implementar, porque o type checker e o interpretador dependem dele.
+//( acho q ajustei )
 
 enum class BaseType { Int, Double, Bool, String, Void, Auto };
 
@@ -79,6 +80,15 @@ struct Stmt {
     Pos pos;
     std::variant<VarDecl, ExprStmt, Block, If, While, For, Break, Continue, Return> node;
 };
+
+// para criar nos de comando
+template 
+StmtPtr make_stmt(Pos pos, T node) {
+    auto s = std::make_unique();
+    s->pos = pos;
+    s->node = std::move(node);
+    return s;
+}
 
 // ------------------------------------------------------------------- Programa
 
