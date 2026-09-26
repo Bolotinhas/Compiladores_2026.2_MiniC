@@ -21,10 +21,33 @@
 //   - O no da AST e VarDecl, em ast.hpp: { TypeRef type; string name; ExprPtr init; }
 //   - Depois de implementar, descomente a declaracao em parser.hpp.
 
+// declarations.cpp - parse de declaracao de variavel:
+//   ['const'] type IDENT ['=' expr] ';'
+
 #include "parser.hpp"
 
 namespace minicpp {
 
-// (implementacao aqui)
+StmtPtr Parser::parse_var_decl() {
+    Pos pos = current().pos;
+
+    // 1. Le o tipo usando o parse_type()
+    TypeRef type = parse_type();
+
+    // 2. Le o nome da variavel
+    Token id = expect(TokenKind::Ident);
+
+    // 3. Le a inicialização opcional '=' expr
+    ExprPtr init = nullptr;
+    if (check(TokenKind::Assign)) {
+        advance();
+        init = parse_expression();
+    }
+
+    // 4. Exige ';' no final
+    expect(TokenKind::Semicolon);
+
+    return make_stmt(pos, VarDecl{type, id.lexeme, std::move(init)});
+}
 
 }  // namespace minicpp
