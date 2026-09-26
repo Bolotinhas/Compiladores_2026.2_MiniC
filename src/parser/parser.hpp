@@ -39,11 +39,11 @@ public:
     // ---------------------------------------------------------- types.cpp
     // TODO(grupo): le um tipo: int | double | bool | string | void | auto
     //              | 'const' type | type '&'
-    // TypeRef parse_type();
+    TypeRef parse_type();
 
     // ----------------------------------------------------- declarations.cpp
     // TODO(grupo): le "['const'] type IDENT ['=' expr] ';'"
-    // StmtPtr parse_var_decl();
+    StmtPtr parse_var_decl();
 
     // -------------------------------------------------------- statements.cpp
     // TODO(grupo): le qualquer comando (despacha para as funcoes abaixo
