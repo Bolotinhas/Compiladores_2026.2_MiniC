@@ -1,0 +1,18 @@
+// Programa VALIDO: soma de 1 a n usando for, ++ e cout.
+// Ainda nao da pra rodar parse_program nele (falta implementar comandos e
+// funcoes - ver TODOs em src/parser/). Serve de alvo para os testes que
+// forem sendo escritos.
+
+int soma_ate(int n) {
+    int total = 0;
+    for (int i = 1; i <= n; i++) {
+        total += i;
+    }
+    return total;
+}
+
+int main() {
+    int n = 10;
+    cout << "soma=" << soma_ate(n) << endl;
+    return 0;
+}

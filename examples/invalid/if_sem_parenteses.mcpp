@@ -1,0 +1,13 @@
+// Programa INVALIDO: 'if' sem parenteses.
+// No MiniC original isso era aceito (a sintaxe era "if expr bloco"),
+// mas no MiniC++ os parenteses sao obrigatorios, como em C++.
+//
+// Erro esperado: token inesperado onde deveria estar '('.
+
+int main() {
+    int x = 5;
+    if x < 10 {
+        x = 0;
+    }
+    return 0;
+}

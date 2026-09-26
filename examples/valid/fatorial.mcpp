@@ -1,0 +1,18 @@
+// Programa-alvo da Fase A do MiniC++.
+// Ainda NAO da para fazer parse dele inteiro (faltam comandos e funcoes),
+// mas ja da para ver os tokens:  ./build/minicpp --tokens examples/fatorial.mcpp
+
+int fatorial(int n) {
+    if (n <= 1) { return 1; }
+    return n * fatorial(n - 1);
+}
+
+void incrementa(int& x) { x++; }
+
+int main() {
+    int n = 5;
+    auto r = fatorial(n);
+    for (int i = 0; i < 3; i++) { incrementa(n); }
+    cout << "fat=" << r << " n=" << n << endl;
+    return 0;
+}

@@ -1,0 +1,11 @@
+// Programa INVALIDO: atribuicao a algo que nao e uma variavel/elemento de array.
+// Erro esperado: "o lado esquerdo de '=' precisa ser uma variavel ou um
+// elemento de array" (ja funciona hoje, mesmo so com o parser de expressoes -
+// testem com: ./build/minicpp --expr "a + b = 3")
+
+int main() {
+    int a = 1;
+    int b = 2;
+    a + b = 3;
+    return 0;
+}

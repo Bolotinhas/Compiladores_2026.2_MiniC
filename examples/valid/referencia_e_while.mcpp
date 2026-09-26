@@ -1,0 +1,15 @@
+// Programa VALIDO: referencia (int&), while, auto e const.
+
+void dobra(int& x) {
+    x = x * 2;
+}
+
+int main() {
+    const int LIMITE = 100;
+    auto valor = 3;
+    while (valor < LIMITE) {
+        dobra(valor);
+    }
+    cout << valor << endl;
+    return 0;
+}
