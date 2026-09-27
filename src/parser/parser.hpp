@@ -47,11 +47,11 @@ public:
 
     // -------------------------------------------------------- statements.cpp
     // TODO(grupo): le qualquer comando (despacha para as funcoes abaixo
-    //              olhando o token atual: '{' -> bloco, 'if' -> parse_if, etc.)
-    // StmtPtr parse_statement();
-    // StmtPtr parse_block();
-    // StmtPtr parse_if();
-    // StmtPtr parse_while();
+    //              olhando o token atual: '{' -> block, 'if' -> parse_if, etc.)
+    StmtPtr parse_statement();
+    StmtPtr parse_block();
+    StmtPtr parse_if();
+    StmtPtr parse_while(); // 'while' -> while_stmt
     // StmtPtr parse_for();
     // StmtPtr parse_return();
 
