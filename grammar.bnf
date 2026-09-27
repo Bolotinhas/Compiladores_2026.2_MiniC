@@ -1,10 +1,17 @@
 #Gramáticas usadas para o MiniC++ (uma versão simplificada do C++)
 
-# Dígitos decimais básicos 
-digito ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+# Elementos léxicos
 
-# Um número inteiro: pode ser apenas um dígito ou vários grudados 
-numero ::= digito (digito)* ;
+# Dígitos decimais básicos 
+digito ::= "0"| "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+digito_nao_nulo ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+# Números
+numero_inteiro ::= "0" | digito_nao_nulo (digito)* ;
+
+numero_real ::= digito_nao_nulo digito* "." digito+ | "0" "." digito+ ;
+
+numero ::= numero_inteiro | numero_real;
 
 # Letras maiúsculas e minúsculas para nomes 
 letra ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" 
@@ -14,47 +21,163 @@ letra ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j"
         | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" 
         | "U" | "V" | "W" | "X" | "Y" | "Z" ;
 
-# Identificador: nomes de variáveis e funções ( obrigatoriamente deve começar com letra ou underline, nunca com número )
-identificador ::= (letra | "_") (letra | digito | "_")* ;
+# Caracteres
+caractere ::= letra | digito | " ";
+
+# Identificador: nomes de variáveis e funções ( obrigatoriamente deve começar com letra)
+identificador ::= (letra) (letra | digito | "_")* ;
 
 # Tipos de dados aceitos no MiniC++
-tipo ::= "int" | "char" ;
+tipo_basico ::= "int" | "char" | "double" | "bool" | "string" ;
 
-# Operadores matemáticos básicos
+tipo_retorno ::= tipo_basico | "void";
+
+# literais
+literal_bool ::= "true" | "false" ;
+
+literal_char ::= "'" caractere "'";
+
+literal_string ::= '"' caractere* '"' ;
+
+literal ::= numero | literal_bool | literal_char | literal_string ;
+
+# Operadores aritméticos e lógicos
 op_aditivo ::= "+" | "-" ;
-op_multiplicativo ::= "*" | "/" ;
 
-# Operadores de comparação lógica
-op_relacional ::= "==" | "!=" | "<" | ">" | "<=" | ">=" ;
+op_multiplicativo ::= "*" | "/" | "%" ;
 
-# Regras para expressões matemáticas e lógicas
-# O valor mais básico possível (um número, uma variável ou algo entre parênteses)
-fator ::= numero | identificador | "(" expressao ")" ;
+op_relacional ::= "<" | "<=" | ">" | ">=" ;
 
-# Regra que cuida da multiplicação e divisão (maior prioridade que soma) 
+op_igualdade ::= "==" | "!=" ;
+
+op_logico_and ::= "&&" ;
+
+op_logico_or ::= "||" ;
+
+op_atribuicao ::= "=" | "+=" | "-=" ;
+
+op_unario ::= "!" ;
+
+# Regras para expressões matemáticas e lógicas, considerandoa hierarquia de prioridade entre as expressões
+fator ::= literal
+        | identificador
+        | acesso_array
+        | chamada_funcao
+        | incremento
+        | "(" expressao ")"
+        | op_unario fator ;
+
+# Regra sobre multiplicação, divisão
 termo ::= fator (op_multiplicativo fator)* ;
 
 # Regra que cuida da soma e subtração
 expr_aritmetica ::= termo (op_aditivo termo)* ;
 
-# Expressão final completa (pode incluir comparações)
-expressao ::= expr_aritmetica (op_relacional expr_aritmetica)? ;
+expressao_relacional ::= expr_aritmetica (op_relacional expr_aritmetica)* ;
 
-# Regras para declaração de variáveis
-# Regra auxiliar para o nome e o valor opcional de cada variável 
-inicializador_var ::= identificador ("=" expressao)? ;
+expressao_igualdade ::= expressao_relacional (op_igualdade expressao_relacional)* ;
 
-# Regra para suportar múltiplas declarações em um comando
-declaracao_variavel ::= tipo inicializador_var ("," inicializador_var)* ";" ;
+expressao_and ::= expressao_igualdade (op_logico_and expressao_igualdade)* ;
 
-# Regras para declaração de if/else
-# Regra para declarar um comando condicional
-comando_if ::= "if" "(" expressao ")" comando ("else" comando)? ;
+expressao_or ::= expressao_and (op_logico_or expressao_and)* ;
 
-# Regra para declarar um comando de retorno
-comando_return ::= "return" expressao ";" ;
+expressao_ternaria ::= expressao_or ("?" expressao ":" expressao)? ;
 
-# Regra temporária que conterá todos os comandos usados no MiniC++
-comando ::= declaracao_variavel | comando_if | comando_return ;
+expressao ::= expressao_ternaria ;
 
-block ::= "{" comando* "}" ;
+# Array 
+acesso_array ::= identificador "[" expressao "]" ;
+
+# Apenas pós-fixado: i++ e i--
+incremento ::= identificador "++"
+             | identificador "--"
+             | acesso_array "++"
+             | acesso_array "--" ;
+
+# Declaração de variáveis
+declarador ::= identificador ("=" expressao)? ;
+
+declaracao_variavel ::= tipo_basico declarador ("," declarador)* ";" ;
+
+# Declaração de Arrays - permitidos somente para o tipo int
+declaracao_array ::= "int" identificador "[" numero_inteiro "]" ";" ;
+
+# Atribuição 
+destino ::= identificador | acesso_array ;
+
+atribuicao ::= destino op_atribuicao expressao ";" ;
+
+atribuicao_sem_terminador ::= destino op_atribuicao expressao ;
+
+# Funções 
+
+# Chamada de funções
+chamada_funcao ::= identificador "(" argumentos? ")" ;
+
+argumentos ::= expressao ("," expressao)* ;
+
+# Declaração de funções
+parametro ::= tipo_basico identificador ;
+
+parametros ::= parametro ("," parametro)* ;
+
+declaracao_funcao ::= tipo_retorno identificador "(" parametros? ")" bloco ;
+
+# Condicionais
+comando_if ::= "if" "(" expressao ")" comando
+               ("else" comando)? ;
+
+# While
+comando_while ::= "while" "(" expressao ")" comando ;
+
+# For
+declaracao_variavel_sem_terminador ::= tipo_basico declarador ("," declarador)* ;
+
+inicializacao_for ::= declaracao_variavel_sem_terminador | atribuicao_sem_terminador;
+
+incremento_for ::= incremento | atribuicao_sem_terminador ;
+
+comando_for ::= "for" "(" inicializacao_for ";" expressao ";" incremento_for ")" comando ;
+
+# Break e continue
+comando_break ::= "break" ";" ;
+
+comando_continue ::= "continue" ";" ;
+
+# Return
+comando_return ::= "return" expressao? ";" ;
+
+# Entrada e saída
+
+#Entrada
+destino_entrada ::= identificador | acesso_array ;
+
+comando_cin ::= "cin" ">>" destino_entrada (">>" destino_entrada)* ";" ;
+
+# Saída
+comando_cout ::= "cout" "<<" expressao ("<<" expressao)* ";" ;
+
+# Blocos
+bloco ::= "{" comando* "}" ;
+
+# Comandos (statements) possíveis
+comando ::= declaracao_variavel
+          | declaracao_array
+          | atribuicao
+          | comando_if
+          | comando_while
+          | comando_for
+          | comando_break
+          | comando_continue
+          | comando_return
+          | comando_cin
+          | comando_cout
+          | bloco
+          | expressao ";" ;
+
+# Função main
+funcao_main ::= "int" "main"  "("  ")"  bloco ;
+
+# Programa
+programa ::= declaracao_funcao*
+             funcao_main ;
