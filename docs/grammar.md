@@ -53,11 +53,11 @@ statement  := block | if_stmt | while_stmt | for_stmt
             | 'break' ';' | 'continue' ';' | return_stmt
             | var_decl ';' | expr_stmt                          🚧
 
-block      := '{' statement* '}'                                🚧
+block      := '{' statement* '}'                                ✅
 
-if_stmt    := 'if' '(' expr ')' statement ['else' statement]    🚧
+if_stmt    := 'if' '(' expr ')' statement ['else' statement]    ✅
 
-while_stmt := 'while' '(' expr ')' statement                    🚧
+while_stmt := 'while' '(' expr ')' statement                    ✅
 
 for_stmt   := 'for' '(' [for_init] ';' [expr] ';' [expr] ')' statement   🚧
 for_init   := var_decl | expr
