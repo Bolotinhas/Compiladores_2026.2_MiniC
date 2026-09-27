@@ -57,4 +57,5 @@ comando_return ::= "return" expressao ";" ;
 # Regra temporária que conterá todos os comandos usados no MiniC++
 comando ::= declaracao_variavel | comando_if | comando_return ;
 
+# Regras para blocos de código
 block ::= "{" comando* "}" ;
