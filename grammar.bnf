@@ -1,0 +1,60 @@
+#Gramáticas usadas para o MiniC++ (uma versão simplificada do C++)
+
+# Dígitos decimais básicos 
+digito ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+# Um número inteiro: pode ser apenas um dígito ou vários grudados 
+numero ::= digito (digito)* ;
+
+# Letras maiúsculas e minúsculas para nomes 
+letra ::= "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" 
+        | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" 
+        | "u" | "v" | "w" | "x" | "y" | "z"
+        | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" 
+        | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" 
+        | "U" | "V" | "W" | "X" | "Y" | "Z" ;
+
+# Identificador: nomes de variáveis e funções ( obrigatoriamente deve começar com letra ou underline, nunca com número )
+identificador ::= (letra | "_") (letra | digito | "_")* ;
+
+# Tipos de dados aceitos no MiniC++
+tipo ::= "int" | "char" ;
+
+# Operadores matemáticos básicos
+op_aditivo ::= "+" | "-" ;
+op_multiplicativo ::= "*" | "/" ;
+
+# Operadores de comparação lógica
+op_relacional ::= "==" | "!=" | "<" | ">" | "<=" | ">=" ;
+
+# Regras para expressões matemáticas e lógicas
+# O valor mais básico possível (um número, uma variável ou algo entre parênteses)
+fator ::= numero | identificador | "(" expressao ")" ;
+
+# Regra que cuida da multiplicação e divisão (maior prioridade que soma) 
+termo ::= fator (op_multiplicativo fator)* ;
+
+# Regra que cuida da soma e subtração
+expr_aritmetica ::= termo (op_aditivo termo)* ;
+
+# Expressão final completa (pode incluir comparações)
+expressao ::= expr_aritmetica (op_relacional expr_aritmetica)? ;
+
+# Regras para declaração de variáveis
+# Regra auxiliar para o nome e o valor opcional de cada variável 
+inicializador_var ::= identificador ("=" expressao)? ;
+
+# Regra para suportar múltiplas declarações em um comando
+declaracao_variavel ::= tipo inicializador_var ("," inicializador_var)* ";" ;
+
+# Regras para declaração de if/else
+# Regra para declarar um comando condicional
+comando_if ::= "if" "(" expressao ")" comando ("else" comando)? ;
+
+# Regra para declarar um comando de retorno
+comando_return ::= "return" expressao ";" ;
+
+# Regra temporária que conterá todos os comandos usados no MiniC++
+comando ::= declaracao_variavel | comando_if | comando_return ;
+
+block ::= "{" comando* "}" ;
