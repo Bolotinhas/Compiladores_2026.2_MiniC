@@ -23,7 +23,7 @@ consumir toda a entrada ou lançar erro.
 ## Tipos
 
 ```ebnf
-type       := base_type | 'const' type | type '&'
+type       := base_type | 'const' type | type '&'  ✅
 base_type  := 'int' | 'double' | 'bool' | 'string' | 'void' | 'auto'
 ```
 
@@ -64,7 +64,7 @@ for_init   := var_decl | expr
 
 return_stmt := 'return' [expr] ';'                               🚧
 
-var_decl   := type IDENT ['=' expr]                              🚧
+var_decl   := type IDENT ['=' expr]                              ✅
 
 expr_stmt  := expr ';'                                           🚧
 ```
