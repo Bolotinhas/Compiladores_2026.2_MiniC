@@ -1,32 +1,22 @@
 // expressions.cpp - parse de expressoes (Pratt parsing).
-// Cobre: literais, identificadores, +-*/ %, comparacoes, && || !,
-// chamadas f(...), indexacao a[i], ++ -- (pre e pos), = += -=, cout << ...
-//
-// Precedencia: tabela unica em infix_bp() logo abaixo. Para adicionar um
-// operador novo, e so acrescentar uma linha nessa tabela (e, se for um
-// prefixo como '-' e '!', um caso em parse_prefix()).
+// Cobre: literais, identificadores, + - * / %, comparacoes, && || !,
+// chamadas f(...), indexacao a[i], ++ -- (pre e pos), = += -=, cout << ...,
+// e o operador ternario (cond ? exp1 : exp2).
+
 #include "parser.hpp"
-
-#include "../lexer.hpp"
-
-#include <optional>
-#include <utility>
-
+#include 
+#include 
+#include 
 
 namespace minicpp {
 
 namespace {
 
 // ---------------------------------------------------------------------------
-// Tabela de precedencia. Maior numero = liga mais forte.
-//
+// Tabela de precedencia
 // Cada operador infixo tem duas forcas: {esquerda, direita}.
 //   esquerda < direita  -> associativo a esquerda   (a - b - c = (a - b) - c)
 //   esquerda > direita  -> associativo a direita    (a = b = c = a = (b = c))
-//
-// Ordem, da mais fraca para a mais forte (igual ao C++):
-//   = += -=  <  ||  <  &&  <  == !=  <  < <= > >=  <  <<  <  + -  <  * / %
-//   depois os prefixos (- ! ++ --) e por fim os pos-fixos ( ) [ ] ++ --
 // ---------------------------------------------------------------------------
 constexpr int kPrefixBp = 17;
 constexpr int kPostfixBp = 19;
@@ -36,112 +26,124 @@ struct InfixBp {
     int right;
 };
 
-std::optional<InfixBp> infix_bp(TokenKind kind) {
-    switch (kind) {
-        case TokenKind::Assign:
-        case TokenKind::PlusAssign:
-        case TokenKind::MinusAssign: return InfixBp{2, 1};
-        case TokenKind::OrOr: return InfixBp{3, 4};
-        case TokenKind::AndAnd: return InfixBp{5, 6};
-        case TokenKind::EqEq:
-        case TokenKind::NotEq: return InfixBp{7, 8};
-        case TokenKind::Lt:
-        case TokenKind::Le:
-        case TokenKind::Gt:
-        case TokenKind::Ge: return InfixBp{9, 10};
-        case TokenKind::Shl: return InfixBp{11, 12};
-        case TokenKind::Plus:
-        case TokenKind::Minus: return InfixBp{13, 14};
-        case TokenKind::Star:
-        case TokenKind::Slash:
-        case TokenKind::Percent: return InfixBp{15, 16};
+std::optional infix_bp(TipoToken tipo) {
+    switch (tipo) {
+        // Atribuicao (associativa a direita)
+        case TipoToken::Assign:
+        case TipoToken::PlusAssign:
+        case TipoToken::MinAssign: return InfixBp{2, 1};
+
+        // Ternario ? : (associativo a direita)
+        case TipoToken::Interrogacao: return InfixBp{4, 3};
+
+        // Logicos
+        case TipoToken::OrOr: return InfixBp{5, 6};
+        case TipoToken::AndAnd: return InfixBp{7, 8};
+
+        // Igualdade e Relacionais
+        case TipoToken::Eq:
+        case TipoToken::NotEq: return InfixBp{9, 10};
+        case TipoToken::Lt:
+        case TipoToken::Le:
+        case TipoToken::Gt:
+        case TipoToken::Ge: return InfixBp{11, 12};
+
+        // Deslocamento / Fluxo E/S (<< e >>)
+        case TipoToken::Shl:
+        case TipoToken::Shr: return InfixBp{13, 14};
+
+        // Aritmeticos
+        case TipoToken::Plus:
+        case TipoToken::Min: return InfixBp{15, 16};
+        case TipoToken::Star:
+        case TipoToken::Div:
+        case TipoToken::Percent: return InfixBp{17, 18};
+
         default: return std::nullopt;
     }
 }
 
-bool is_postfix(TokenKind kind) {
-    return kind == TokenKind::LParen || kind == TokenKind::LBracket ||
-           kind == TokenKind::PlusPlus || kind == TokenKind::MinusMinus;
+bool is_postfix(TipoToken tipo) {
+    return tipo == TipoToken::ColEsquerda || tipo == TipoToken::ColchEsq ||
+           tipo == TipoToken::PlusPLus || tipo == TipoToken::MinMin;
 }
 
 bool is_lvalue(const Expr& e) {
-    return std::holds_alternative<Ident>(e.node) || std::holds_alternative<Index>(e.node);
+    return std::holds_alternative(e.node) || std::holds_alternative(e.node);
 }
 
 std::string describe(const Token& t) {
-    if (t.kind == TokenKind::Eof) return "fim do arquivo";
+    if (t.tipo == TipoToken::FimArquivo) return "fim do arquivo";
     return "'" + t.lexeme + "'";
 }
 
 ExprPtr build_binary(const Token& op, ExprPtr lhs, ExprPtr rhs) {
     BinaryOp bop;
-    switch (op.kind) {
-        case TokenKind::Plus: bop = BinaryOp::Add; break;
-        case TokenKind::Minus: bop = BinaryOp::Sub; break;
-        case TokenKind::Star: bop = BinaryOp::Mul; break;
-        case TokenKind::Slash: bop = BinaryOp::Div; break;
-        case TokenKind::Percent: bop = BinaryOp::Mod; break;
-        case TokenKind::EqEq: bop = BinaryOp::Eq; break;
-        case TokenKind::NotEq: bop = BinaryOp::Ne; break;
-        case TokenKind::Lt: bop = BinaryOp::Lt; break;
-        case TokenKind::Le: bop = BinaryOp::Le; break;
-        case TokenKind::Gt: bop = BinaryOp::Gt; break;
-        case TokenKind::Ge: bop = BinaryOp::Ge; break;
-        case TokenKind::AndAnd: bop = BinaryOp::And; break;
-        case TokenKind::OrOr: bop = BinaryOp::Or; break;
-        case TokenKind::Shl: bop = BinaryOp::Shl; break;
-        default: throw CompileError("operador binario desconhecido", op.pos);
+    switch (op.tipo) {
+        case TipoToken::Plus: bop = BinaryOp::Add; break;
+        case TipoToken::Min: bop = BinaryOp::Sub; break;
+        case TipoToken::Star: bop = BinaryOp::Mul; break;
+        case TipoToken::Div: bop = BinaryOp::Div; break;
+        case TipoToken::Percent: bop = BinaryOp::Mod; break;
+        case TipoToken::Eq: bop = BinaryOp::Eq; break;
+        case TipoToken::NotEq: bop = BinaryOp::Ne; break;
+        case TipoToken::Lt: bop = BinaryOp::Lt; break;
+        case TipoToken::Le: bop = BinaryOp::Le; break;
+        case TipoToken::Gt: bop = BinaryOp::Gt; break;
+        case TipoToken::Ge: bop = BinaryOp::Ge; break;
+        case TipoToken::AndAnd: bop = BinaryOp::And; break;
+        case TipoToken::OrOr: bop = BinaryOp::Or; break;
+        case TipoToken::Shl: bop = BinaryOp::Shl; break;
+        case TipoToken::Shr: bop = BinaryOp::Shr; break;
+        default: throw CompileError("Operador binario desconhecido", op.posicao);
     }
-    Pos pos = lhs->pos;
+    Posicao pos = lhs->posicao;
     return make_expr(pos, Binary{bop, std::move(lhs), std::move(rhs)});
 }
 
 ExprPtr build_assign(const Token& op, ExprPtr target, ExprPtr value) {
     if (!is_lvalue(*target)) {
-        throw CompileError("o lado esquerdo de " + std::string(to_string(op.kind)) +
-                               " precisa ser uma variavel ou um elemento de array",
-                           op.pos);
+        throw CompileError("O lado esquerdo da atribuicao precisa ser uma variavel ou elemento de array",
+                           op.posicao);
     }
-    AssignOp aop = op.kind == TokenKind::Assign       ? AssignOp::Assign
-                   : op.kind == TokenKind::PlusAssign ? AssignOp::AddAssign
-                                                      : AssignOp::SubAssign;
-    Pos pos = target->pos;
+    AssignOp aop = op.tipo == TipoToken::Assign     ? AssignOp::Assign
+                 : op.tipo == TipoToken::PlusAssign ? AssignOp::AddAssign
+                                                    : AssignOp::SubAssign;
+    Posicao pos = target->posicao;
     return make_expr(pos, Assign{aop, std::move(target), std::move(value)});
 }
 
 }  // namespace
 
-Parser::Parser(std::vector<Token> tokens) : tokens_(std::move(tokens)) {
-    // Garante o sentinela Eof no final, para current() nunca sair do vetor.
-    if (tokens_.empty() || tokens_.back().kind != TokenKind::Eof) {
-        Pos p = tokens_.empty() ? Pos{} : tokens_.back().pos;
-        tokens_.push_back(Token{TokenKind::Eof, "", p});
+Parser::Parser(std::vector tokens) : tokens_(std::move(tokens)) {
+    // Garante o sentinela FimArquivo no final do vetor
+    if (tokens_.empty() || tokens_.back().tipo != TipoToken::FimArquivo) {
+        Posicao p = tokens_.empty() ? Posicao{} : tokens_.back().posicao;
+        tokens_.push_back(Token{TipoToken::FimArquivo, "", p});
     }
 }
 
 const Token& Parser::advance() {
     const Token& t = tokens_[pos_];
-    if (t.kind != TokenKind::Eof) ++pos_;
+    if (t.tipo != TipoToken::FimArquivo) ++pos_;
     return t;
 }
 
-const Token& Parser::expect(TokenKind kind) {
-    if (!check(kind)) {
-        throw CompileError(std::string("esperado ") + to_string(kind) + " mas encontrado " +
-                               describe(current()),
-                           current().pos);
+const Token& Parser::expect(TipoToken tipo) {
+    if (!check(tipo)) {
+        throw CompileError("Token inesperado encontrado " + describe(current()),
+                           current().posicao);
     }
     return advance();
 }
 
 ExprPtr Parser::parse_expression() { return parse_expr_bp(0); }
 
-// Coracao do Pratt parser: le um operando e, enquanto o proximo operador
-// ligar com forca >= min_bp, o consome e continua.
+// Coracao do Pratt parser: le operando e aplica operadores de acordo com a precedencia
 ExprPtr Parser::parse_expr_bp(int min_bp) {
     ExprPtr lhs = parse_prefix();
     for (;;) {
-        TokenKind k = current().kind;
+        TipoToken k = current().tipo;
 
         if (is_postfix(k)) {
             if (kPostfixBp < min_bp) break;
@@ -153,9 +155,20 @@ ExprPtr Parser::parse_expr_bp(int min_bp) {
         if (!bp || bp->left < min_bp) break;
 
         Token op = advance();
+
+        // Tratamento especial para o Operador Ternario (cond ? expr1 : expr2)
+        if (op.tipo == TipoToken::Interrogacao) {
+            ExprPtr then_branch = parse_expression();
+            expect(TipoToken::DoisPontos);
+            ExprPtr else_branch = parse_expr_bp(bp->right);
+            Posicao pos = lhs->posicao;
+            lhs = make_expr(pos, Ternary{std::move(lhs), std::move(then_branch), std::move(else_branch)});
+            continue;
+        }
+
         ExprPtr rhs = parse_expr_bp(bp->right);
-        if (op.kind == TokenKind::Assign || op.kind == TokenKind::PlusAssign ||
-            op.kind == TokenKind::MinusAssign) {
+        if (op.tipo == TipoToken::Assign || op.tipo == TipoToken::PlusAssign ||
+            op.tipo == TipoToken::MinAssign) {
             lhs = build_assign(op, std::move(lhs), std::move(rhs));
         } else {
             lhs = build_binary(op, std::move(lhs), std::move(rhs));
@@ -166,99 +179,112 @@ ExprPtr Parser::parse_expr_bp(int min_bp) {
 
 ExprPtr Parser::parse_prefix() {
     Token t = advance();
-    switch (t.kind) {
-        case TokenKind::IntLit: {
+    switch (t.tipo) {
+        case TipoToken::IntLit: {
             try {
-                return make_expr(t.pos, IntLit{std::stoll(t.lexeme)});
+                return make_expr(t.posicao, IntLit{std::stoll(t.lexeme)});
             } catch (const std::out_of_range&) {
-                throw CompileError("literal inteiro fora do intervalo", t.pos);
+                throw CompileError("Literal inteiro fora do intervalo", t.posicao);
             }
         }
-        case TokenKind::DoubleLit: {
+        case TipoToken::DoubleLit: {
             try {
-                return make_expr(t.pos, DoubleLit{std::stod(t.lexeme)});
+                return make_expr(t.posicao, DoubleLit{std::stod(t.lexeme)});
             } catch (const std::out_of_range&) {
-                throw CompileError("literal double fora do intervalo", t.pos);
+                throw CompileError("Literal double fora do intervalo", t.posicao);
             }
         }
-        case TokenKind::StringLit: return make_expr(t.pos, StringLit{t.lexeme});
-        case TokenKind::KwTrue: return make_expr(t.pos, BoolLit{true});
-        case TokenKind::KwFalse: return make_expr(t.pos, BoolLit{false});
-        case TokenKind::Ident: return make_expr(t.pos, Ident{t.lexeme});
+        case TipoToken::CharLit: {
+            // Remove as aspas simples do char (ex: "'a'" -> 'a')
+            char c = (t.lexeme.size() >= 3) ? t.lexeme[1] : '\0';
+            return make_expr(t.posicao, CharLit{c});
+        }
+        case TipoToken::StringLit: 
+            return make_expr(t.posicao, StringLit{t.lexeme});
+        
+        case TipoToken::PalTrue:  
+            return make_expr(t.posicao, BoolLit{true});
+        
+        case TipoToken::PalFalse: 
+            return make_expr(t.posicao, BoolLit{false});
+        
+        case TipoToken::Ident:    
+            return make_expr(t.posicao, Ident{t.lexeme});
 
-        case TokenKind::LParen: {
+        case TipoToken::ColEsquerda: {
             ExprPtr inner = parse_expr_bp(0);
-            expect(TokenKind::RParen);
+            expect(TipoToken::ColDireita);
             return inner;
         }
 
-        case TokenKind::Minus:
-            return make_expr(t.pos, Unary{UnaryOp::Neg, parse_expr_bp(kPrefixBp)});
-        case TokenKind::Not:
-            return make_expr(t.pos, Unary{UnaryOp::Not, parse_expr_bp(kPrefixBp)});
-        case TokenKind::PlusPlus:
-        case TokenKind::MinusMinus: {
+        case TipoToken::Min:
+            return make_expr(t.posicao, Unary{UnaryOp::Neg, parse_expr_bp(kPrefixBp)});
+        
+        case TipoToken::Not:
+            return make_expr(t.posicao, Unary{UnaryOp::Not, parse_expr_bp(kPrefixBp)});
+        
+        case TipoToken::PlusPLus:
+        case TipoToken::MinMin: {
             ExprPtr operand = parse_expr_bp(kPrefixBp);
             if (!is_lvalue(*operand)) {
-                throw CompileError(std::string("o operando de ") + to_string(t.kind) +
-                                       " precisa ser uma variavel ou um elemento de array",
-                                   t.pos);
+                throw CompileError("O operando de incremento/decremento precisa ser variavel ou elemento de array",
+                                   t.posicao);
             }
-            UnaryOp op = t.kind == TokenKind::PlusPlus ? UnaryOp::PreInc : UnaryOp::PreDec;
-            return make_expr(t.pos, Unary{op, std::move(operand)});
+            UnaryOp op = t.tipo == TipoToken::PlusPLus ? UnaryOp::PreInc : UnaryOp::PreDec;
+            return make_expr(t.posicao, Unary{op, std::move(operand)});
         }
 
         default:
-            throw CompileError("expressao esperada mas encontrado " + describe(t), t.pos);
+            throw CompileError("Expressao esperada mas foi encontrado " + describe(t), t.posicao);
     }
 }
 
 ExprPtr Parser::parse_postfix(ExprPtr lhs) {
     Token t = advance();
-    Pos pos = lhs->pos;
-    switch (t.kind) {
-        case TokenKind::LParen: {
-            auto* id = std::get_if<Ident>(&lhs->node);
-            if (!id) throw CompileError("so e possivel chamar funcoes pelo nome", t.pos);
-            std::vector<ExprPtr> args;
-            if (!check(TokenKind::RParen)) {
+    Posicao pos = lhs->posicao;
+    switch (t.tipo) {
+        case TipoToken::ColEsquerda: { // Chamada de funcao f(...)
+            auto* id = std::get_if(&lhs->node);
+            if (!id) throw CompileError("So e possivel chamar funcoes diretamente pelo nome", t.posicao);
+            
+            std::vector args;
+            if (!check(TipoToken::ColDireita)) {
                 args.push_back(parse_expr_bp(0));
-                while (check(TokenKind::Comma)) {
-                    advance();
+                while (check(TipoToken::Virg)) {
+                    advance(); // consome ','
                     args.push_back(parse_expr_bp(0));
                 }
             }
-            expect(TokenKind::RParen);
+            expect(TipoToken::ColDireita);
             return make_expr(pos, Call{id->name, std::move(args)});
         }
-        case TokenKind::LBracket: {
+        case TipoToken::ColchEsq: { // Acesso a array arr[i]
             ExprPtr index = parse_expr_bp(0);
-            expect(TokenKind::RBracket);
+            expect(TipoToken::ColchDir);
             return make_expr(pos, Index{std::move(lhs), std::move(index)});
         }
-        case TokenKind::PlusPlus:
-        case TokenKind::MinusMinus: {
+        case TipoToken::PlusPLus:
+        case TipoToken::MinMin: { // Pos-incremento e pos-decremento
             if (!is_lvalue(*lhs)) {
-                throw CompileError(std::string("o operando de ") + to_string(t.kind) +
-                                       " precisa ser uma variavel ou um elemento de array",
-                                   t.pos);
+                throw CompileError("O operando precisa ser uma variavel ou elemento de array", t.posicao);
             }
-            UnaryOp op = t.kind == TokenKind::PlusPlus ? UnaryOp::PostInc : UnaryOp::PostDec;
+            UnaryOp op = t.tipo == TipoToken::PlusPLus ? UnaryOp::PostInc : UnaryOp::PostDec;
             return make_expr(pos, Unary{op, std::move(lhs)});
         }
         default:
-            throw CompileError("operador pos-fixo inesperado", t.pos);
+            throw CompileError("Operador pos-fixo inesperado", t.posicao);
     }
 }
 
 ExprPtr parse_expression_string(const std::string& source) {
+    // Assume que a classe Lexer retorna std::vector com a estrutura do token.hpp
     Parser parser(Lexer(source).tokenize());
     ExprPtr expr = parser.parse_expression();
     if (!parser.at_end()) {
-        throw CompileError("token inesperado " + describe(parser.current()),
-                           parser.current().pos);
+        throw CompileError("Token inesperado apos expressao " + describe(parser.current()),
+                           parser.current().posicao);
     }
     return expr;
 }
 
-}  // namespace minicpp
+}
